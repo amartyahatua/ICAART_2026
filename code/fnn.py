@@ -1,13 +1,12 @@
 import argparse
 import torch
-import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.optim.lr_scheduler import StepLR
 from matplotlib import pyplot as plt
 import os
+
 os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 torch.autograd.set_detect_anomaly(True)
 class Net(nn.Module):
@@ -45,6 +44,7 @@ class Net(nn.Module):
 
         if self.type == 'unlearning':
             rank = torch.tensor([i for i in range(x.shape[1])])
+            rank = rank.to(self.device)
             x = x*torch.exp(-(self.epoch/rank))
 
         x = F.relu(x)
@@ -53,6 +53,7 @@ class Net(nn.Module):
 
         if self.type == 'unlearning':
             rank = torch.tensor([i for i in range(x.shape[1])])
+            rank = rank.to(self.device)
             x = x*torch.exp(-(self.epoch/rank))
         output = F.log_softmax(x, dim=1)
         return output
@@ -63,6 +64,7 @@ def train(args, model, device, train_loader, optimizer, epoch, type, turn):
     model.type = type
     model.epoch = epoch
     model.turn = turn
+    model.device = device
 
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
@@ -134,7 +136,7 @@ def main():
     torch.manual_seed(args.seed)
 
     if use_cuda:
-        device = torch.device("cuda")
+        device = torch.device("cuda:0")
     elif use_mps:
         device = torch.device("mps")
     else:
